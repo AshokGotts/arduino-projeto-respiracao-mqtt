@@ -1,6 +1,4 @@
-## ⚙️ Código principal (Arduino)
 
-```cpp
 #include <SoftwareSerial.h>
 
 // Comunicação com ESP8266
@@ -85,4 +83,5 @@ void enviarComando(String cmd, int tempo) {
   while (esp.available()) {
     Serial.write(esp.read());
   }
+
 }
