@@ -11,7 +11,7 @@ O protótipo utiliza LEDs para representar as fases do ciclo respiratório — *
 
 ---
 
-##Lista de componentes
+#Lista de componentes
 
 - 1 × Placa **Arduino Uno R3**  
 - 1 × Módulo **ESP8266** (Wi‑Fi)  
@@ -21,6 +21,22 @@ O protótipo utiliza LEDs para representar as fases do ciclo respiratório — *
 - 1 × Protoboard  
 - Jumpers diversos  
 - Cabo USB para conexão ao computador  
+
+#Resultados
+O sistema detecta presença a menos de 20 cm com o sensor HC‑SR04.
+Após a detecção, os LEDs são acionados em sequência para guiar o ciclo respiratório:
+Verde (Inspirar) → 5 segundos
+Vermelho (Segurar) → 2 segundos
+Azul (Expirar) → 4 segundos
+Vermelho (Segurar) → 2 segundos
+Ao final do ciclo, o Arduino envia ao ESP8266 a mensagem MQTT “RESPIRAÇÃO COMPLETA”.
+A mensagem é publicada no broker Mosquitto (test.mosquitto.org:1883), no tópico respiracao/teste.
+Clientes externos (ex.: HiveMQ Web Client) conseguem assinar o tópico e visualizar a mensagem publicada.
+
+#Conclusão
+O protótipo Intellecta demonstrou a viabilidade da integração entre hardware simples e protocolos de rede para aplicações em Internet das Coisas (IoT).
+O sistema cumpriu o requisito de comunicação via MQTT, eliminando a necessidade de ponte pelo notebook e garantindo autonomia na publicação de dados. Além disso, mostrou-se confiável na detecção de presença e na execução do ciclo de LEDs, oferecendo uma solução acessível e de baixo custo para práticas de relaxamento e promoção da saúde mental.
+Conclui-se que a proposta pode ser expandida para incluir autenticação segura, brokers privados e integração com plataformas de análise em nuvem, consolidando sua aplicabilidade em cenários reais de monitoramento e bem-estar.
 
 ---
 
