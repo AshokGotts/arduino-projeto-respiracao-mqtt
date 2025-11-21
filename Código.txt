@@ -1,27 +1,4 @@
-#Intellecta
-
-Este trabalho apresenta o desenvolvimento de um sistema de **respiração guiada** baseado em conceitos da **Internet das Coisas (IoT)**, utilizando um kit de hardware composto por uma placa Uno R3 compatível com Arduino, LEDs de diferentes cores, sensores e componentes eletrônicos básicos.  
-
-O sistema tem como objetivo auxiliar os usuários em práticas de **relaxamento e redução do estresse**, em alinhamento com o **Objetivo de Desenvolvimento Sustentável 3 da ONU (Saúde e Bem-estar)**.  
-
-O protótipo utiliza LEDs para representar as fases do ciclo respiratório — **inspirar, segurar e expirar** — oferecendo uma solução acessível e de baixo custo para a promoção da saúde mental, explorando tecnologias embarcadas e recursos da IoT.
-
----
-
-#Lista de componentes
-
-- 1 × Placa **Arduino Uno R3**  
-- 1 × Módulo **ESP8266** (Wi‑Fi)  
-- 1 × Sensor ultrassônico **HC‑SR04**  
-- 3 × LEDs (verde, vermelho e azul)  
-- 3 × Resistores de 150 Ω  
-- 1 × Protoboard  
-- Jumpers diversos  
-- Cabo USB para conexão ao computador  
-
----
-
-#Código principal (Arduino)
+## ⚙️ Código principal (Arduino)
 
 ```cpp
 #include <SoftwareSerial.h>
