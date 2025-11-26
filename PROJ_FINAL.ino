@@ -1,116 +1,120 @@
-#include <SoftwareSerial.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
 
-// ----- Comunicação com ESP8266 -----
-SoftwareSerial esp(2, 3); // RX = 2, TX = 3
+// ====== CONFIG Wi-Fi ======
+const char* ssid     = "Wokwi-GUEST";
+const char* password = "";
 
-// ----- Pinos dos LEDs -----
-const int ledVerde = 10;
-const int ledVermelho = 11;
-const int ledAzul = 12;
+// ====== CONFIG MQTT ======
+const char* mqtt_server = "broker.emqx.io";
+const int mqtt_port = 1883;
+const char* mqtt_client_id = "esp32-respiracao-001";
+const char* mqtt_topic = "respiracao/fase";  // <<< TOPICO QUE O CELULAR VAI ASSINAR
 
-// ----- Sensor HC-SR04 -----
-const int trigPin = 7;
-const int echoPin = 8;
+WiFiClient espClient;
+PubSubClient client(espClient);
 
-void setup() {
-  Serial.begin(9600);
-  esp.begin(115200); // ESP deve estar configurado para 9600 baud
+// ====== LEDs ======
+#define LED_VERDE    27
+#define LED_VERMELHO 14
+#define LED_AZUL     12
 
-  pinMode(ledVerde, OUTPUT);
-  pinMode(ledVermelho, OUTPUT);
-  pinMode(ledAzul, OUTPUT);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
+// ====== Ultrassônico ======
+#define TRIG 5
+#define ECHO 18
+const int DISTANCIA_MIN = 0;
+const int DISTANCIA_MAX = 20;
 
-  Serial.println("=== Teste Serial iniciado ===");
-
-  // Teste ESP
-  enviarComando("AT", 2000);
-  Serial.println(">>> Teste ESP enviado: AT");
-
-  // Reset ESP
-  enviarComando("AT+RST", 2000);
-  Serial.println(">>> ESP reiniciado");
-
-  // Configurar modo estação
-  enviarComando("AT+CWMODE=1", 1000);
-  Serial.println(">>> ESP em modo estação");
-
-  // Conectar ao Wi-Fi (POCO X3 PRO)
-  enviarComando("AT+CWJAP=\"POCO X3 PRO\",\"1234568G\"", 8000);
-  Serial.println(">>> Conectando ao Wi-Fi POCO X3 PRO...");
-
-  // Conectar ao broker MQTT na porta 1883
-  enviarComando("AT+CIPSTART=\"TCP\",\"test.mosquitto.org\",1883", 5000);
-  Serial.println(">>> Conectando ao broker MQTT na porta 1883...");
-
-  // Enviar pacote CONNECT MQTT
-  enviarComando("AT+CIPSEND=18", 1000);
-  esp.print("\x10\x10\x00\x04MQTT\x04\x02\x00<\x00\x03UNO");
-  Serial.println(">>> Pacote CONNECT MQTT enviado");
-
-  Serial.println("=== Sistema pronto. Aguardando presença... ===");
-}
-
-void loop() {
-  long distancia = medirDistancia();
-
-  if (distancia > 0 && distancia < 20) {
-    Serial.print("Presença detectada a ");
-    Serial.print(distancia);
-    Serial.println(" cm. Aguardando 5 segundos...");
-    delay(5000);
-
-    acenderLED(ledVerde, 5000, "Verde = OK");
-    acenderLED(ledVermelho, 2000, "Vermelho = OK");
-    acenderLED(ledAzul, 4000, "Azul = OK");
-    acenderLED(ledVermelho, 2000, "Vermelho = OK");
-
-    // Publicar mensagem MQTT
-    String msg = "\x30\x28\x00\x11respiracao/testeRESPIRAÇÃO COMPLETA";
-    enviarComando("AT+CIPSEND=" + String(msg.length()), 1000);
-    esp.print(msg);
-
-    Serial.println(">>> Mensagem MQTT enviada: RESPIRAÇÃO COMPLETA\n");
-  }
-
-  delay(500);
-}
-
-// ----- Funções auxiliares -----
-void acenderLED(int pino, int tempo, String nome) {
-  digitalWrite(pino, HIGH);
-  Serial.print("LED ligado: ");
-  Serial.println(nome);
-  delay(tempo);
-  digitalWrite(pino, LOW);
-  Serial.print("LED desligado: ");
-  Serial.println(nome);
-}
-
+// ====== Função: medir distância ======
 long medirDistancia() {
-  digitalWrite(trigPin, LOW); delayMicroseconds(5);
-  digitalWrite(trigPin, HIGH); delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  long duracao = pulseIn(echoPin, HIGH, 60000);
-  if (duracao == 0) {
-    Serial.println(">>> Nenhum objeto detectado");
-    return -1;
-  }
-  long cm = duracao * 0.034 / 2;
-  Serial.print(">>> Distância medida: ");
-  Serial.print(cm);
-  Serial.println(" cm");
-  return cm;
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  long duracao = pulseIn(ECHO, HIGH, 30000);
+  if (duracao == 0) return -1;
+
+  return duracao * 0.034 / 2;
 }
 
-void enviarComando(String cmd, int tempo) {
-  Serial.print(">> Enviando comando: ");
-  Serial.println(cmd);
-  esp.println(cmd);
-  delay(tempo);
-  while (esp.available()) {
-    char c = esp.read();
-    Serial.write(c);
+// ====== PUBLICAR NO MQTT ======
+void publicaFase(String fase) {
+  client.publish(mqtt_topic, fase.c_str());
+  Serial.print("📤 Publicado no MQTT: ");
+  Serial.println(fase);
+}
+
+// ====== CONECTAR AO MQTT ======
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Conectando ao MQTT... ");
+    if (client.connect(mqtt_client_id)) {
+      Serial.println("Conectado!");
+    } else {
+      Serial.print("Falhou, rc=");
+      Serial.print(client.state());
+      Serial.println(" Tentando novamente em 3s...");
+      delay(3000);
+    }
   }
 }
+
+// ====== SETUP ======
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(LED_VERDE, OUTPUT);
+  pinMode(LED_VERMELHO, OUTPUT);
+  pinMode(LED_AZUL, OUTPUT);
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  // WiFi
+  Serial.print("Conectando ao WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(250);
+    Serial.print(".");
+  }
+  Serial.println(" Conectado!");
+
+  client.setServer(mqtt_server, mqtt_port);
+
+  Serial.println("===== SISTEMA DE RESPIRAÇÃO COM MQTT =====");
+}
+
+// ====== LOOP ======
+void loop() {
+  if (!client.connected()) reconnect();
+  client.loop();
+
+  long distancia = medirDistancia();
+  Serial.print("Distância: ");
+  Serial.println(distancia);
+
+  if (distancia > DISTANCIA_MIN && distancia < DISTANCIA_MAX) {
+
+    digitalWrite(LED_VERDE, HIGH); delay(5000);
+    digitalWrite(LED_VERDE, LOW);
+    publicaFase("INSPIRAR");
+
+    digitalWrite(LED_VERMELHO, HIGH); delay(2000);
+    digitalWrite(LED_VERMELHO, LOW);
+    publicaFase("SEGURAR");
+
+    digitalWrite(LED_AZUL, HIGH); delay(4000);
+    digitalWrite(LED_AZUL, LOW);
+    publicaFase("EXPIRAR");
+
+    digitalWrite(LED_VERMELHO, HIGH); delay(2000);
+    digitalWrite(LED_VERMELHO, LOW);
+    publicaFase("SEGURAR");
+  }
+
+  delay(200);
+}
+
+Coloca a atualização no Git do código por favor
